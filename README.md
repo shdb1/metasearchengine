@@ -12,7 +12,7 @@ A meta search engine backed by Yahoo and Google news search engines .
 # Way to build and run
 
 1. download/clone project.
-2. Naviogate to root directory using command promot/terminal.
+2. Navigate to root directory using command promot/terminal.
 3. run below command to build app (It will generate a jar)
 mvn clean install
 
