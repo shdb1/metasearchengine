@@ -6,6 +6,7 @@ public class NewsResults implements Comparable<NewsResults> {
 	private String url;
 	private int rank;
 	private String serachEngineName;
+	private double score;
 
 	public String getTtile() {
 		return ttile;
@@ -39,10 +40,18 @@ public class NewsResults implements Comparable<NewsResults> {
 		this.serachEngineName = serachEngineName;
 	}
 
+	public double getScore() {
+		return score;
+	}
+
+	public void setScore(double score) {
+		this.score = score;
+	}
+
 	@Override
 	public String toString() {
 		return "NewsResults [ttile=" + ttile + ", url=" + url + ", rank=" + rank + ", serachEngineName="
-				+ serachEngineName + "]";
+				+ serachEngineName + ", score=" + score + "]";
 	}
 
 	@Override

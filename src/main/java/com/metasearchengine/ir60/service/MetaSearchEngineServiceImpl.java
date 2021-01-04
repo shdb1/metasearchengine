@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -13,10 +14,10 @@ import org.springframework.stereotype.Service;
 
 import com.metasearchengine.ir60.constants.MetaSearchEngineConstants;
 import com.metasearchengine.ir60.model.NewsResults;
+import com.metasearchengine.ir60.model.NewsResultsScoreComparator;
 import com.metasearchengine.ir60.util.HTMLParser;
 import com.metasearchengine.ir60.util.HttpUtil;
-
-
+import com.metasearchengine.ir60.util.TFIDFCalculator;
 
 /**
  * @author moshadab
@@ -25,13 +26,12 @@ import com.metasearchengine.ir60.util.HttpUtil;
 @Service
 public class MetaSearchEngineServiceImpl implements MetaSearchEngineService {
 
-
 	@Override
 	public List<NewsResults> searchNews(String queryString) {
 		// TODO Auto-generated method stub
 
 		// get yahoo news
-		List<NewsResults> finalresult=null;
+		List<NewsResults> finalresult = null;
 
 		try {
 			String googleNews = HttpUtil.doHTTPGetID(MetaSearchEngineConstants.ENGINE_GOOGLE_BASE_URL
@@ -46,11 +46,14 @@ public class MetaSearchEngineServiceImpl implements MetaSearchEngineService {
 			String yahooNews = HttpUtil.doHTTPGetID(MetaSearchEngineConstants.ENGINE_YAHOO_BASE_URL
 					+ encode(queryString) + MetaSearchEngineConstants.ENGINE_HELPING_STRING_YAHOO);
 			List<NewsResults> yahooResults = parseNews(yahooNews, MetaSearchEngineConstants.SEARCH_ENGINE_TYPE_YAHOO);
-			  finalresult = rankResults(googleResults, yahooResults);
+			finalresult = rankResults(googleResults, yahooResults);
 			// Store the ranked results to file ResultantRanks_A1.txt
-			storeResultsToFile(finalresult, "ResultantRanks_A1.txt");
-			
- 		} catch (IOException e) {
+			storeResultsToFile(finalresult, "ResultantRanks_A1.txt", false);
+			// Calculate the customized (Own approach based rank)
+			termFrequencyBasedScore(finalresult, queryString);
+			setRankBasedOnScore(finalresult);
+			storeResultsToFile(finalresult, "ResultantRanks_A2.txt", true);
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -145,7 +148,7 @@ public class MetaSearchEngineServiceImpl implements MetaSearchEngineService {
 	}
 
 	private List<NewsResults> rankResults(List<NewsResults> googleResults, List<NewsResults> yahooResults) {
-	 
+
 		int rank = 1;
 		List<NewsResults> biggerList = null;
 		List<NewsResults> smallerList = null;
@@ -173,15 +176,22 @@ public class MetaSearchEngineServiceImpl implements MetaSearchEngineService {
 		}
 		return finalresult;
 	}
-	private void storeResultsToFile(List<NewsResults> finalresult,String filename) {
-		StringBuffer finaldataString= new StringBuffer(MetaSearchEngineConstants.RESULT_HEADER);
+
+	private void storeResultsToFile(List<NewsResults> finalresult, String filename, boolean scoreNeeded) {
+		StringBuffer finaldataString = null;
+		if (scoreNeeded)
+			finaldataString = new StringBuffer(MetaSearchEngineConstants.RESULT_HEADER_WITH_SCORE);
+		else
+			finaldataString = new StringBuffer(MetaSearchEngineConstants.RESULT_HEADER);
 		for (NewsResults newsResult : finalresult) {
-			finaldataString.append("\n")
-			.append(newsResult.getSerachEngineName())
-			.append(MetaSearchEngineConstants.META_SERACH_ENGINE_RESULTS_SPLITTER)
-			.append(newsResult.getRank())
-			.append(MetaSearchEngineConstants.META_SERACH_ENGINE_RESULTS_SPLITTER)
-			.append(newsResult.getTtile());
+			finaldataString.append("\n").append(newsResult.getSerachEngineName());
+			if (scoreNeeded) {
+				finaldataString.append(MetaSearchEngineConstants.META_SERACH_ENGINE_RESULTS_SPLITTER)
+						.append(newsResult.getScore());
+			}
+			finaldataString.append(MetaSearchEngineConstants.META_SERACH_ENGINE_RESULTS_SPLITTER)
+					.append(newsResult.getRank()).append(MetaSearchEngineConstants.META_SERACH_ENGINE_RESULTS_SPLITTER)
+					.append(newsResult.getTtile());
 		}
 		try {
 			PrintWriter printWriter = new PrintWriter(filename);
@@ -191,4 +201,36 @@ public class MetaSearchEngineServiceImpl implements MetaSearchEngineService {
 			e.printStackTrace();
 		}
 	}
+
+	private void termFrequencyBasedScore(List<NewsResults> finResults, String query) {
+		String[] queryList = query.split(" ");
+		List<List<String>> documents = new ArrayList<List<String>>();
+		for (NewsResults result : finResults) {
+			List<String> singleTitleWords = new ArrayList<String>();
+			documents.add(singleTitleWords);
+		}
+
+		for (NewsResults result : finResults) {
+			double score = 0.0;
+			for (String queryWord : queryList) {
+				score = score
+						+ TFIDFCalculator.tfIdf(Arrays.asList(result.getTtile().split(" ")), documents, queryWord);
+
+			}
+			result.setScore(score);
+			System.out.println("score:" + score);
+
+		}
+
+	}
+
+	private void setRankBasedOnScore(List<NewsResults> finResults) {
+		Collections.sort(finResults, new NewsResultsScoreComparator());
+		int rank = 1;
+		for (NewsResults newsResults : finResults) {
+			newsResults.setRank(rank);
+			rank++;
+		}
+	}
+
 }
