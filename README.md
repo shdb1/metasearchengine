@@ -25,7 +25,7 @@ java -jar YOUR_SYSTEM_PATH/target/metasearchengine-beta.jar
 
 http://localhost:8080/news/search?query=?
 
-Example : http://localhost:8080/news/search?query=daurav gangualy's health 
+Example : http://localhost:8080/news/search?query=Saurav gangualy's health 
 
 6. Once yo hit the URL you must see output on browser screen (JSON content) and file generated with the name ResultantRanks_A1.txt.
 
